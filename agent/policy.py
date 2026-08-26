@@ -37,4 +37,27 @@ class PolicyContext:
 
 
 def check(context: PolicyContext) -> tuple[bool, str]:
-    raise NotImplementedError("BƯỚC 3b: implement policy check")
+    """Policy enforcement check.
+
+    Returns: (allow: bool, reason: str)
+    """
+    # Rule bắt buộc: restricted data + egress = DENY
+    if context.data_classification == "restricted" and context.egress_enabled:
+        return False, "denied: restricted data cannot egress"
+
+    # Restricted data without egress = allow (read only)
+    if context.data_classification == "restricted":
+        return True, f"restricted data read allowed for purpose: {context.request_purpose}"
+
+    # Internal data với egress có thể được cho phép với purpose phù hợp
+    if context.data_classification == "internal":
+        if context.egress_enabled:
+            return True, f"internal data egress allowed for purpose: {context.request_purpose}"
+        return True, f"internal data access allowed for purpose: {context.request_purpose}"
+
+    # Public data luôn được phép
+    if context.data_classification == "public":
+        return True, f"public data access allowed for purpose: {context.request_purpose}"
+
+    # Fallback - không nên đến đây
+    return False, f"unknown classification: {context.data_classification}"
